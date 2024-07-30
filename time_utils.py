@@ -3,6 +3,7 @@ from astropy.time import Time
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import EarthLocation
 import astropy.units as u
+import numpy as np
 
 
 class TimeConverter:
@@ -83,7 +84,7 @@ class TimeConverter:
         ltt_helio = time_to_correct.light_travel_time(target, "heliocentric")
         return ltt_bary, ltt_helio
 
-    def convert_time(self, input_times):
+    def convert_time(self, input_times: list):
         # check for unnecessary conversion
         if self.input_format == self.output_format and self.input_timestamps == "mid":
             print("No conversion needed, times are in requested format")
@@ -93,32 +94,16 @@ class TimeConverter:
         location = EarthLocation.of_site(self.observatory)
 
         # read in the input times - assumes first column if >1 col
-        tinp = deepcopy(input_times)
-
-        # first correct the times to the mid-point, if required
-        # correction is assuming to be in units of half_exptime
-        correction = (self.exptime / 2.0) / 60.0 / 60.0 / 24.0
-        if self.input_timestamps == "mid":
-            print("No timestamp correction needed")
-        elif self.input_timestamps == "start":
-            print("Converting START --> MID")
-            tinp = tinp + correction
-        elif self.input_timestamps == "end":
-            print("Converting END --> MID")
-            tinp = tinp - correction
+        tinp = input_times
 
         # set up the astropy time inputs and convert them to JD-UTC-MID
         if self.input_format == "jd_utc":
-            print("Input times in JD, applying no initial correction")
             time_inp = Time(tinp, format="jd", scale="utc", location=location)
         elif self.input_format == "isot_utc":
-            print("Input times in ISO, applying no initial correction")
             time_inp = Time(tinp, format="isot", scale="utc", location=location)
         elif self.input_format == "mjd_utc":
-            print("Input times in MJD, applying no initial correction")
             time_inp = Time(tinp, format="mjd", scale="utc", location=location)
         elif self.input_format == "hjd_utc":
-            print("Input times in HJD, removing heliocentric correction")
             time_inp = Time(tinp, format="jd", scale="utc", location=location)
             _, ltt_helio = TimeConverter.getLightTravelTimes(
                 self.ra, self.dec, time_inp
@@ -127,7 +112,6 @@ class TimeConverter:
                 time_inp.utc - ltt_helio, format="jd", scale="utc", location=location
             )
         elif self.input_format == "bjd_tdb":
-            print("Input times in BJD, removing barycentric correction")
             time_inp = Time(tinp, format="jd", scale="tdb", location=location)
             ltt_bary, _ = TimeConverter.getLightTravelTimes(self.ra, self.dec, time_inp)
             time_inp = Time(
@@ -135,6 +119,17 @@ class TimeConverter:
             ).utc
         else:
             raise ValueError("Unknown input time format, exiting...")
+
+        # first correct the times to the mid-point, if required
+        # correction is assuming to be in units of half_exptime
+        correction = (self.exptime / 2.0) / 60.0 / 60.0 / 24.0
+        if self.input_timestamps == "mid":
+            correction = 0.0 * u.day
+        elif self.input_timestamps == "start":
+            correction *= 1.0 * u.day
+        elif self.input_timestamps == "end":
+            correction *= -1.0 * u.day
+        time_inp = time_inp + correction
 
         # now convert to the output format requested
         if self.output_format == "jd_utc":
