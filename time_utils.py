@@ -14,12 +14,12 @@ class TimeConverter:
     def __init__(
         self,
         input_format,
-        input_timestamps,
         output_format,
         ra,
         dec,
-        exptime,
         observatory,
+        exptime=0,
+        input_timestamps="mid",
     ):
         """
         Parameters
@@ -118,7 +118,18 @@ class TimeConverter:
                 time_inp.tdb - ltt_bary, format="jd", scale="tdb", location=location
             ).utc
         else:
-            raise ValueError("Unknown input time format, exiting...")
+            current_support_time_formats = [
+                "jd_utc",
+                "isot_utc",
+                "mjd_utc",
+                "hjd_utc",
+                "bjd_tdb",
+            ]
+            raise ValueError(
+                "Unknown input time format, please use one of the following: {}".format(
+                    current_support_time_formats
+                )
+            )
 
         # first correct the times to the mid-point, if required
         # correction is assuming to be in units of half_exptime
