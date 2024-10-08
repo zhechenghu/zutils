@@ -24,4 +24,4 @@ def change_workdir(endswith, print_cwd=False):
     sys.path.append(working_dir)
     if print_cwd:
         print(f"Current work dir: {working_dir}")
-    return
+    return working_dir
