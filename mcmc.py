@@ -118,6 +118,9 @@ class MCMCUtils:
         ## Find the best fit ##
         params_best = params_chain[np.argmin(chi2_chain), :]
         params_errs = np.percentile(params_chain, q=[16, 84], axis=0)
+        params_errs = np.vstack(
+            [params_best - params_errs[0, :], params_errs[1, :] - params_best]
+        )
         if print_info:
             print(f"Best chi2: {chi2_chain.min()}")
             print("Best parameters: ")
